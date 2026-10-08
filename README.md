@@ -38,4 +38,4 @@ La página oculta lo que el rol no puede hacer. Cada envío vuelve a comprobar e
 2. La parada del Horno 3, del 08/10/2026 23:50 al 09/10/2026 00:20, muestra 30 min. La duración se calcula con las dos fechas completas y no se guarda.
 3. Editar la alerta "Fuga de aceite" como operario o como jefe responde 403. Máquina, descripción, usuario y fecha quedan iguales.
 4. La primera cancelación de esa parada guardó al jefe, la fecha y el motivo "Pieza reemplazada". Una segunda cancelación, con otro motivo, no cambió esos tres datos ni duplicó ni borró la fila. Operario y supervisor también reciben 403 si intentan cancelar.
-5. Quedaron 10 alertas y 5 paradas. La página carga para los cuatro usuarios. operarios@test.com ve 6 alertas propias y ninguna de operarios2@test.com. operarios2@test.com ve solo las 4 suyas. Supervisor y jefe ven las 10 alertas y las 5 paradas.
+5. Tras las pruebas de uso quedaron 14 alertas y 10 paradas. La página carga para los cuatro usuarios. operarios@test.com ve 8 alertas propias y ninguna de operarios2@test.com. operarios2@test.com ve solo las 6 suyas. Supervisor y jefe ven las 14 alertas y las 10 paradas.
