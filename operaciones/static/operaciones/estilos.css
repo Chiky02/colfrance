@@ -218,7 +218,7 @@ select {
 .vacio { margin-top: 0.4rem; }
 
 dialog.confirmar {
-  width: min(100% - 2rem, 22rem);
+  width: min(100% - 2rem, 28rem);
   border: 1px solid var(--linea);
   border-radius: 16px;
   padding: 1.25rem;

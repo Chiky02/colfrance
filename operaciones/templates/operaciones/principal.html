@@ -79,7 +79,7 @@
     <h2>Alertas <span>{{ pagina_alertas.paginator.count }}</span></h2>
 
     {% if rol == "operario" %}
-      <form method="post" class="formulario" id="form-alerta" novalidate>
+      <form method="post" class="formulario" id="form-alerta" data-confirma="¿Seguro que desea registrar esta alerta?" data-aceptar="Sí, registrar" novalidate>
         {% csrf_token %}
         <input type="hidden" name="accion" value="crear_alerta">
         <input type="hidden" name="alertas" value="{{ pagina_alertas.number }}">
@@ -95,14 +95,6 @@
         {% endfor %}
         <button type="submit">Guardar alerta</button>
       </form>
-      <dialog id="confirmar-alerta" class="confirmar">
-        <h2>¿Seguro que desea registrar esta alerta?</h2>
-        <p id="resumen-alerta"></p>
-        <div class="acciones">
-          <button type="button" class="secundario" id="cancelar-alerta">Cancelar</button>
-          <button type="button" id="aceptar-alerta">Sí, registrar</button>
-        </div>
-      </dialog>
     {% endif %}
 
     {% if edicion %}
@@ -115,7 +107,7 @@
                 <time datetime="{{ alerta.fecha|date:'c' }}">{{ alerta.fecha|date:"d/m/Y H:i" }}</time>
               </header>
               {% if formulario %}
-                <form method="post" novalidate>
+                <form method="post" data-confirma="¿Seguro que desea guardar los cambios de esta alerta?" data-aceptar="Sí, guardar" novalidate>
                   {% csrf_token %}
                   <input type="hidden" name="accion" value="editar_alerta">
                   <input type="hidden" name="alerta_id" value="{{ alerta.pk }}">
@@ -152,7 +144,7 @@
       <h2>Paradas <span>{{ pagina_paradas.paginator.count }}</span></h2>
 
       {% if rol == "supervisor" %}
-        <form method="post" class="formulario" novalidate>
+        <form method="post" class="formulario" data-confirma="¿Seguro que desea registrar esta parada?" data-aceptar="Sí, registrar" novalidate>
           {% csrf_token %}
           <input type="hidden" name="accion" value="crear_parada">
           <input type="hidden" name="alertas" value="{{ pagina_alertas.number }}">
@@ -191,7 +183,7 @@
                     Motivo: {{ parada.motivo_cancelacion }}
                   </p>
                 {% elif formulario %}
-                  <form method="post" novalidate>
+                  <form method="post" data-confirma="¿Seguro que desea cancelar esta parada?" data-aceptar="Sí, cancelar" novalidate>
                     {% csrf_token %}
                     <input type="hidden" name="accion" value="cancelar_parada">
                     <input type="hidden" name="parada_id" value="{{ parada.pk }}">
@@ -219,6 +211,14 @@
     </section>
   {% endif %}
 </main>
+<dialog id="confirmar-cambio" class="confirmar">
+  <h2 id="titulo-cambio">¿Seguro que desea continuar?</h2>
+  <p id="resumen-cambio"></p>
+  <div class="acciones">
+    <button type="button" class="secundario" id="cancelar-cambio">Cancelar</button>
+    <button type="button" id="aceptar-cambio">Sí, continuar</button>
+  </div>
+</dialog>
 <script>
   const dialogoSalida = document.getElementById("confirmar-salida");
   document.getElementById("abrir-salida").addEventListener("click", () => {
@@ -228,26 +228,62 @@
     dialogoSalida.close();
   });
 
-  const formAlerta = document.getElementById("form-alerta");
-  const dialogoAlerta = document.getElementById("confirmar-alerta");
-  if (formAlerta && dialogoAlerta) {
-    formAlerta.addEventListener("submit", (evento) => {
-      if (formAlerta.dataset.confirmado === "1") return;
-      evento.preventDefault();
-      const maquina = formAlerta.querySelector("[name='nueva-maquina']").value.trim();
-      const descripcion = formAlerta.querySelector("[name='nueva-descripcion']").value.trim();
-      const resumen = [maquina, descripcion].filter(Boolean).join(": ");
-      document.getElementById("resumen-alerta").textContent = resumen || "Faltan la máquina o la descripción.";
-      dialogoAlerta.showModal();
-    });
-    document.getElementById("cancelar-alerta").addEventListener("click", () => {
-      dialogoAlerta.close();
-    });
-    document.getElementById("aceptar-alerta").addEventListener("click", () => {
-      formAlerta.dataset.confirmado = "1";
-      dialogoAlerta.close();
-      formAlerta.requestSubmit();
-    });
+  const dialogoCambio = document.getElementById("confirmar-cambio");
+  const tituloCambio = document.getElementById("titulo-cambio");
+  const resumenCambio = document.getElementById("resumen-cambio");
+  const aceptarCambio = document.getElementById("aceptar-cambio");
+  let formularioPendiente = null;
+
+  function textoCampo(formulario, sufijo) {
+    const campo = formulario.querySelector(`[name$="${sufijo}"]`);
+    return campo ? campo.value.trim() : "";
   }
+
+  function resumenDe(formulario) {
+    const accion = formulario.querySelector("[name='accion']");
+    const tipo = accion ? accion.value : "";
+    if (tipo === "crear_alerta" || tipo === "editar_alerta") {
+      return [textoCampo(formulario, "-maquina"), textoCampo(formulario, "-descripcion")]
+        .filter(Boolean)
+        .join(": ") || "Faltan la máquina o la descripción.";
+    }
+    if (tipo === "crear_parada") {
+      return [
+        textoCampo(formulario, "-maquina"),
+        [textoCampo(formulario, "-inicio"), textoCampo(formulario, "-fin")].filter(Boolean).join(" – "),
+        textoCampo(formulario, "-motivo"),
+      ].filter(Boolean).join(". ") || "Faltan datos de la parada.";
+    }
+    if (tipo === "cancelar_parada") {
+      return textoCampo(formulario, "-motivo_cancelacion") || "Falta el motivo de la cancelación.";
+    }
+    return "";
+  }
+
+  document.querySelectorAll("form[data-confirma]").forEach((formulario) => {
+    formulario.addEventListener("submit", (evento) => {
+      if (formulario.dataset.confirmado === "1") return;
+      evento.preventDefault();
+      formularioPendiente = formulario;
+      tituloCambio.textContent = formulario.dataset.confirma;
+      resumenCambio.textContent = resumenDe(formulario);
+      aceptarCambio.textContent = formulario.dataset.aceptar || "Sí, continuar";
+      aceptarCambio.classList.toggle("peligro", formulario.dataset.aceptar === "Sí, cancelar");
+      dialogoCambio.showModal();
+    });
+  });
+
+  document.getElementById("cancelar-cambio").addEventListener("click", () => {
+    formularioPendiente = null;
+    dialogoCambio.close();
+  });
+  aceptarCambio.addEventListener("click", () => {
+    const formulario = formularioPendiente;
+    formularioPendiente = null;
+    dialogoCambio.close();
+    if (!formulario) return;
+    formulario.dataset.confirmado = "1";
+    formulario.requestSubmit();
+  });
 </script>
 {% endblock %}
