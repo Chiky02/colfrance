@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import Alerta, Parada
+from .models import Alerta, Parada, Perfil
+
+
+@admin.register(Perfil)
+class PerfilAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'cedula', 'telefono', 'usuario')
+    search_fields = ('nombre', 'cedula', 'telefono', 'usuario__username')
 
 
 @admin.register(Alerta)

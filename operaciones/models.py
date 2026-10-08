@@ -1,7 +1,40 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import F, Q
+
+cedula_valida = RegexValidator(
+    r'^\d{6,12}$',
+    'La cédula debe tener entre 6 y 12 dígitos.',
+)
+telefono_valido = RegexValidator(
+    r'^\d{7,15}$',
+    'El teléfono debe tener entre 7 y 15 dígitos.',
+)
+
+
+class Perfil(models.Model):
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='perfil',
+    )
+    nombre = models.CharField('nombre', max_length=120)
+    telefono = models.CharField('teléfono', max_length=15, validators=[telefono_valido])
+    cedula = models.CharField(
+        'cédula',
+        max_length=12,
+        unique=True,
+        validators=[cedula_valida],
+    )
+
+    class Meta:
+        verbose_name = 'perfil'
+        verbose_name_plural = 'perfiles'
+
+    def __str__(self):
+        return self.nombre
 
 
 class Alerta(models.Model):

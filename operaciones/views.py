@@ -1,9 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+
+POR_PAGINA = 5
 
 from .forms import AlertaForm, CancelacionForm, ParadaForm
 from .models import Alerta, Parada
@@ -28,9 +31,24 @@ def consulta(user, rol):
         alertas = Alerta.objects.none()
         paradas = Parada.objects.none()
     return (
-        alertas.select_related('usuario'),
-        paradas.select_related('usuario', 'cancelada_por'),
+        alertas.select_related('usuario__perfil'),
+        paradas.select_related('usuario__perfil', 'cancelada_por__perfil'),
     )
+
+
+def numero_pagina(request, clave):
+    origen = request.POST if request.method == 'POST' else request.GET
+    try:
+        return max(int(origen.get(clave, 1)), 1)
+    except (TypeError, ValueError):
+        return 1
+
+
+def paginar(queryset, numero):
+    paginador = Paginator(queryset, POR_PAGINA)
+    if numero > paginador.num_pages:
+        numero = paginador.num_pages or 1
+    return paginador.page(numero)
 
 
 @login_required
@@ -98,8 +116,10 @@ def principal(request):
             return prohibido()
 
     alertas, paradas = consulta(request.user, rol)
+    pagina_alertas = paginar(alertas, numero_pagina(request, 'alertas'))
+    pagina_paradas = paginar(paradas, numero_pagina(request, 'paradas'))
     edicion = []
-    for alerta in alertas:
+    for alerta in pagina_alertas:
         if rol == 'supervisor':
             formulario = editar_errores.get(alerta.pk) or AlertaForm(
                 instance=alerta,
@@ -110,7 +130,7 @@ def principal(request):
         edicion.append((alerta, formulario))
 
     listado_paradas = []
-    for parada in paradas:
+    for parada in pagina_paradas:
         if rol == 'jefe' and parada.cancelada_en is None:
             formulario = cancelar_errores.get(parada.pk) or CancelacionForm(
                 prefix=f'cancelar-{parada.pk}',
@@ -128,8 +148,11 @@ def principal(request):
             'rol_descripcion': DESCRIPCIONES.get(rol, 'Esta cuenta no tiene un rol asignado.'),
             'alerta_form': alerta_form,
             'parada_form': parada_form,
+            'perfil': getattr(request.user, 'perfil', None),
             'edicion': edicion,
             'listado_paradas': listado_paradas,
+            'pagina_alertas': pagina_alertas,
+            'pagina_paradas': pagina_paradas,
         },
         status=estado,
     )

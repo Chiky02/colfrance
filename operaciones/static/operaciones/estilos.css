@@ -192,6 +192,21 @@ dialog.confirmar::backdrop {
 
 dialog.confirmar h2 { margin-bottom: 0.35rem; }
 
+.paginacion {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  color: var(--suave);
+}
+
+.paginacion a {
+  color: var(--acento-oscuro);
+  font-weight: 700;
+  text-decoration: none;
+}
+
 dialog.confirmar .acciones {
   display: flex;
   justify-content: flex-end;

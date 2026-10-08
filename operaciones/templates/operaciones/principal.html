@@ -1,4 +1,5 @@
 {% extends "operaciones/base.html" %}
+{% load operaciones %}
 
 {% block titulo %}Planta · Colfrance{% endblock %}
 
@@ -10,15 +11,18 @@
   </div>
   <div class="sesion">
     <p>
-      <strong>{{ user.username }}</strong>
+      <strong>{% if perfil %}{{ perfil.nombre }}{% else %}{{ user.username }}{% endif %}</strong>
       <span class="rol">{{ rol_etiqueta }}</span>
     </p>
+    {% if perfil %}
+      <p class="meta">Cédula {{ perfil.cedula }} · Tel. {{ perfil.telefono }}</p>
+    {% endif %}
     <button type="button" class="secundario" id="abrir-salida">Salir</button>
     <dialog id="confirmar-salida" class="confirmar">
       <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
         <h2>¿Seguro que desea salir?</h2>
-        <p class="ayuda">Se cerrará la sesión de {{ user.username }}.</p>
+        <p class="ayuda">Se cerrará la sesión de {% if perfil %}{{ perfil.nombre }}{% else %}{{ user.username }}{% endif %}.</p>
         <div class="acciones">
           <button type="button" class="secundario" id="cancelar-salida">Cancelar</button>
           <button type="submit">Sí, salir</button>
@@ -40,12 +44,14 @@
   {% endif %}
 
   <section class="tarjeta" id="alertas">
-    <h2>Alertas <span>{{ edicion|length }}</span></h2>
+    <h2>Alertas <span>{{ pagina_alertas.paginator.count }}</span></h2>
 
     {% if rol == "operario" %}
       <form method="post" class="formulario" novalidate>
         {% csrf_token %}
         <input type="hidden" name="accion" value="crear_alerta">
+        <input type="hidden" name="alertas" value="{{ pagina_alertas.number }}">
+        <input type="hidden" name="paradas" value="{{ pagina_paradas.number }}">
         <h3>Registrar alerta</h3>
         {% for field in alerta_form %}
           <div class="campo">
@@ -72,6 +78,8 @@
                   {% csrf_token %}
                   <input type="hidden" name="accion" value="editar_alerta">
                   <input type="hidden" name="alerta_id" value="{{ alerta.pk }}">
+                  <input type="hidden" name="alertas" value="{{ pagina_alertas.number }}">
+                  <input type="hidden" name="paradas" value="{{ pagina_paradas.number }}">
                   {% for field in formulario %}
                     <div class="campo">
                       {{ field.label_tag }}
@@ -79,17 +87,18 @@
                       {{ field.errors }}
                     </div>
                   {% endfor %}
-                  <p class="meta">Reportó {{ alerta.usuario.username }}</p>
+                  <p class="meta">Reportó {{ alerta.usuario|nombre_persona }}</p>
                   <button type="submit">Guardar cambios</button>
                 </form>
               {% else %}
                 <p>{{ alerta.descripcion }}</p>
-                <p class="meta">Reportó {{ alerta.usuario.username }}</p>
+                <p class="meta">Reportó {{ alerta.usuario|nombre_persona }}</p>
               {% endif %}
             </article>
           </li>
         {% endfor %}
       </ul>
+      {% include "operaciones/paginacion.html" with pagina=pagina_alertas clave="alertas" otra=pagina_paradas otra_clave="paradas" %}
     {% else %}
       <p class="vacio">Todavía no hay alertas para mostrar.</p>
     {% endif %}
@@ -97,12 +106,14 @@
 
   {% if rol == "supervisor" or rol == "jefe" %}
     <section class="tarjeta" id="paradas">
-      <h2>Paradas <span>{{ listado_paradas|length }}</span></h2>
+      <h2>Paradas <span>{{ pagina_paradas.paginator.count }}</span></h2>
 
       {% if rol == "supervisor" %}
         <form method="post" class="formulario" novalidate>
           {% csrf_token %}
           <input type="hidden" name="accion" value="crear_parada">
+          <input type="hidden" name="alertas" value="{{ pagina_alertas.number }}">
+          <input type="hidden" name="paradas" value="{{ pagina_paradas.number }}">
           <h3>Registrar parada</h3>
           {% for field in parada_form %}
             <div class="campo">
@@ -127,11 +138,11 @@
                 <p>{{ parada.motivo }}</p>
                 <p class="meta">
                   {{ parada.inicio|date:"d/m/Y H:i" }} – {{ parada.fin|date:"d/m/Y H:i" }}
-                  · Registró {{ parada.usuario.username }}
+                  · Registró {{ parada.usuario|nombre_persona }}
                 </p>
                 {% if parada.cancelada_en %}
                   <p class="cancelada">
-                    Cancelada por {{ parada.cancelada_por.username }}
+                    Cancelada por {{ parada.cancelada_por|nombre_persona }}
                     el {{ parada.cancelada_en|date:"d/m/Y H:i" }}.
                     Motivo: {{ parada.motivo_cancelacion }}
                   </p>
@@ -140,6 +151,8 @@
                     {% csrf_token %}
                     <input type="hidden" name="accion" value="cancelar_parada">
                     <input type="hidden" name="parada_id" value="{{ parada.pk }}">
+                    <input type="hidden" name="alertas" value="{{ pagina_alertas.number }}">
+                    <input type="hidden" name="paradas" value="{{ pagina_paradas.number }}">
                     {% for field in formulario %}
                       <div class="campo">
                         {{ field.label_tag }}
@@ -154,6 +167,7 @@
             </li>
           {% endfor %}
         </ul>
+        {% include "operaciones/paginacion.html" with pagina=pagina_paradas clave="paradas" otra=pagina_alertas otra_clave="alertas" %}
       {% else %}
         <p class="vacio">Todavía no hay paradas registradas.</p>
       {% endif %}
