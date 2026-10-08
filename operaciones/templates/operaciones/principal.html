@@ -14,9 +14,7 @@
       <strong>{% if perfil %}{{ perfil.nombre }}{% else %}{{ user.username }}{% endif %}</strong>
       <span class="rol">{{ rol_etiqueta }}</span>
     </p>
-    {% if perfil %}
-      <p class="meta">Cédula {{ perfil.cedula }} · Tel. {{ perfil.telefono }}</p>
-    {% endif %}
+  
     <button type="button" class="secundario" id="abrir-salida">Salir</button>
     <dialog id="confirmar-salida" class="confirmar">
       <form method="post" action="{% url 'logout' %}">
@@ -47,7 +45,7 @@
     <h2>Alertas <span>{{ pagina_alertas.paginator.count }}</span></h2>
 
     {% if rol == "operario" %}
-      <form method="post" class="formulario" novalidate>
+      <form method="post" class="formulario" id="form-alerta" novalidate>
         {% csrf_token %}
         <input type="hidden" name="accion" value="crear_alerta">
         <input type="hidden" name="alertas" value="{{ pagina_alertas.number }}">
@@ -62,6 +60,14 @@
         {% endfor %}
         <button type="submit">Guardar alerta</button>
       </form>
+      <dialog id="confirmar-alerta" class="confirmar">
+        <h2>¿Seguro que desea registrar esta alerta?</h2>
+        <p id="resumen-alerta"></p>
+        <div class="acciones">
+          <button type="button" class="secundario" id="cancelar-alerta">Cancelar</button>
+          <button type="button" id="aceptar-alerta">Sí, registrar</button>
+        </div>
+      </dialog>
     {% endif %}
 
     {% if edicion %}
@@ -182,5 +188,27 @@
   document.getElementById("cancelar-salida").addEventListener("click", () => {
     dialogoSalida.close();
   });
+
+  const formAlerta = document.getElementById("form-alerta");
+  const dialogoAlerta = document.getElementById("confirmar-alerta");
+  if (formAlerta && dialogoAlerta) {
+    formAlerta.addEventListener("submit", (evento) => {
+      if (formAlerta.dataset.confirmado === "1") return;
+      evento.preventDefault();
+      const maquina = formAlerta.querySelector("[name='nueva-maquina']").value.trim();
+      const descripcion = formAlerta.querySelector("[name='nueva-descripcion']").value.trim();
+      const resumen = [maquina, descripcion].filter(Boolean).join(": ");
+      document.getElementById("resumen-alerta").textContent = resumen || "Faltan la máquina o la descripción.";
+      dialogoAlerta.showModal();
+    });
+    document.getElementById("cancelar-alerta").addEventListener("click", () => {
+      dialogoAlerta.close();
+    });
+    document.getElementById("aceptar-alerta").addEventListener("click", () => {
+      formAlerta.dataset.confirmado = "1";
+      dialogoAlerta.close();
+      formAlerta.requestSubmit();
+    });
+  }
 </script>
 {% endblock %}
