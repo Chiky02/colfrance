@@ -1,0 +1,172 @@
+{% extends "operaciones/base.html" %}
+
+{% block titulo %}Planta · Colfrance{% endblock %}
+
+{% block cuerpo %}
+<header class="barra">
+  <div>
+    <p class="marca">Colfrance</p>
+    <h1>Alertas y paradas</h1>
+  </div>
+  <div class="sesion">
+    <p>
+      <strong>{{ user.username }}</strong>
+      <span class="rol">{{ rol_etiqueta }}</span>
+    </p>
+    <button type="button" class="secundario" id="abrir-salida">Salir</button>
+    <dialog id="confirmar-salida" class="confirmar">
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <h2>¿Seguro que desea salir?</h2>
+        <p class="ayuda">Se cerrará la sesión de {{ user.username }}.</p>
+        <div class="acciones">
+          <button type="button" class="secundario" id="cancelar-salida">Cancelar</button>
+          <button type="submit">Sí, salir</button>
+        </div>
+      </form>
+    </dialog>
+  </div>
+</header>
+
+<main class="pagina">
+  <p class="ayuda">{{ rol_descripcion }}</p>
+
+  {% if messages %}
+    <ul class="avisos">
+      {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <section class="tarjeta" id="alertas">
+    <h2>Alertas <span>{{ edicion|length }}</span></h2>
+
+    {% if rol == "operario" %}
+      <form method="post" class="formulario" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear_alerta">
+        <h3>Registrar alerta</h3>
+        {% for field in alerta_form %}
+          <div class="campo">
+            {{ field.label_tag }}
+            {{ field }}
+            {{ field.errors }}
+          </div>
+        {% endfor %}
+        <button type="submit">Guardar alerta</button>
+      </form>
+    {% endif %}
+
+    {% if edicion %}
+      <ul class="lista">
+        {% for alerta, formulario in edicion %}
+          <li>
+            <article>
+              <header>
+                <h3>{{ alerta.maquina }}</h3>
+                <time datetime="{{ alerta.fecha|date:'c' }}">{{ alerta.fecha|date:"d/m/Y H:i" }}</time>
+              </header>
+              {% if formulario %}
+                <form method="post" novalidate>
+                  {% csrf_token %}
+                  <input type="hidden" name="accion" value="editar_alerta">
+                  <input type="hidden" name="alerta_id" value="{{ alerta.pk }}">
+                  {% for field in formulario %}
+                    <div class="campo">
+                      {{ field.label_tag }}
+                      {{ field }}
+                      {{ field.errors }}
+                    </div>
+                  {% endfor %}
+                  <p class="meta">Reportó {{ alerta.usuario.username }}</p>
+                  <button type="submit">Guardar cambios</button>
+                </form>
+              {% else %}
+                <p>{{ alerta.descripcion }}</p>
+                <p class="meta">Reportó {{ alerta.usuario.username }}</p>
+              {% endif %}
+            </article>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="vacio">Todavía no hay alertas para mostrar.</p>
+    {% endif %}
+  </section>
+
+  {% if rol == "supervisor" or rol == "jefe" %}
+    <section class="tarjeta" id="paradas">
+      <h2>Paradas <span>{{ listado_paradas|length }}</span></h2>
+
+      {% if rol == "supervisor" %}
+        <form method="post" class="formulario" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="crear_parada">
+          <h3>Registrar parada</h3>
+          {% for field in parada_form %}
+            <div class="campo">
+              {{ field.label_tag }}
+              {{ field }}
+              {{ field.errors }}
+            </div>
+          {% endfor %}
+          <button type="submit">Guardar parada</button>
+        </form>
+      {% endif %}
+
+      {% if listado_paradas %}
+        <ul class="lista">
+          {% for parada, formulario in listado_paradas %}
+            <li>
+              <article>
+                <header>
+                  <h3>{{ parada.maquina }}</h3>
+                  <p class="duracion">{{ parada.duracion_minutos }} min</p>
+                </header>
+                <p>{{ parada.motivo }}</p>
+                <p class="meta">
+                  {{ parada.inicio|date:"d/m/Y H:i" }} – {{ parada.fin|date:"d/m/Y H:i" }}
+                  · Registró {{ parada.usuario.username }}
+                </p>
+                {% if parada.cancelada_en %}
+                  <p class="cancelada">
+                    Cancelada por {{ parada.cancelada_por.username }}
+                    el {{ parada.cancelada_en|date:"d/m/Y H:i" }}.
+                    Motivo: {{ parada.motivo_cancelacion }}
+                  </p>
+                {% elif formulario %}
+                  <form method="post" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="cancelar_parada">
+                    <input type="hidden" name="parada_id" value="{{ parada.pk }}">
+                    {% for field in formulario %}
+                      <div class="campo">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {{ field.errors }}
+                      </div>
+                    {% endfor %}
+                    <button type="submit" class="peligro">Cancelar parada</button>
+                  </form>
+                {% endif %}
+              </article>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="vacio">Todavía no hay paradas registradas.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+</main>
+<script>
+  const dialogoSalida = document.getElementById("confirmar-salida");
+  document.getElementById("abrir-salida").addEventListener("click", () => {
+    dialogoSalida.showModal();
+  });
+  document.getElementById("cancelar-salida").addEventListener("click", () => {
+    dialogoSalida.close();
+  });
+</script>
+{% endblock %}
