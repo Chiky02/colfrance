@@ -1,16 +1,21 @@
+from urllib.parse import urlencode
+
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
-
-POR_PAGINA = 5
 
 from .forms import AlertaForm, CancelacionForm, ParadaForm
 from .models import Alerta, Parada
 from .roles import DESCRIPCIONES, ETIQUETAS, rol_de
+
+POR_PAGINA = 5
+User = get_user_model()
 
 
 def prohibido():
@@ -20,20 +25,49 @@ def prohibido():
     )
 
 
-def consulta(user, rol):
+def parametros(request):
+    origen = request.POST if request.method == 'POST' else request.GET
+    vista = origen.get('vista', 'alertas')
+    if vista not in ('alertas', 'paradas'):
+        vista = 'alertas'
+    orden = origen.get('orden', 'reciente')
+    if orden not in ('reciente', 'antiguo'):
+        orden = 'reciente'
+    persona = origen.get('persona', '')
+    if not str(persona).isdigit():
+        persona = ''
+    return vista, orden, persona
+
+
+def consulta(user, rol, persona, orden):
     if rol == 'operario':
         alertas = Alerta.objects.filter(usuario=user)
         paradas = Parada.objects.none()
     elif rol in ('supervisor', 'jefe'):
         alertas = Alerta.objects.all()
         paradas = Parada.objects.all()
+        if persona:
+            alertas = alertas.filter(usuario_id=persona)
+            paradas = paradas.filter(usuario_id=persona)
     else:
         alertas = Alerta.objects.none()
         paradas = Parada.objects.none()
+    if orden == 'antiguo':
+        alertas = alertas.order_by('fecha', 'pk')
+        paradas = paradas.order_by('inicio', 'pk')
+    else:
+        alertas = alertas.order_by('-fecha', '-pk')
+        paradas = paradas.order_by('-inicio', '-pk')
     return (
         alertas.select_related('usuario__perfil'),
         paradas.select_related('usuario__perfil', 'cancelada_por__perfil'),
     )
+
+
+def redirigir_lista(request, vista):
+    _, orden, persona = parametros(request)
+    consulta_url = urlencode({'vista': vista, 'persona': persona, 'orden': orden})
+    return redirect(f"{reverse('principal')}?{consulta_url}")
 
 
 def numero_pagina(request, clave):
@@ -85,7 +119,7 @@ def principal(request):
             if formulario.is_valid():
                 formulario.save()
                 messages.success(request, 'Alerta actualizada.')
-                return redirect('principal')
+                return redirigir_lista(request, 'alertas')
             editar_errores[alerta.pk] = formulario
             estado = 400
         elif accion == 'crear_parada':
@@ -97,7 +131,7 @@ def principal(request):
                 parada.usuario = request.user
                 parada.save()
                 messages.success(request, 'Parada registrada.')
-                return redirect('principal')
+                return redirigir_lista(request, 'paradas')
             estado = 400
         elif accion == 'cancelar_parada':
             if rol != 'jefe':
@@ -115,7 +149,15 @@ def principal(request):
         else:
             return prohibido()
 
-    alertas, paradas = consulta(request.user, rol)
+    vista, orden, persona = parametros(request)
+    if rol == 'operario':
+        vista = 'alertas'
+    alertas, paradas = consulta(request.user, rol, persona, orden)
+    personas = []
+    if rol in ('supervisor', 'jefe'):
+        personas = User.objects.filter(perfil__isnull=False).select_related('perfil').order_by(
+            'perfil__nombre'
+        )
     pagina_alertas = paginar(alertas, numero_pagina(request, 'alertas'))
     pagina_paradas = paginar(paradas, numero_pagina(request, 'paradas'))
     edicion = []
@@ -153,6 +195,10 @@ def principal(request):
             'listado_paradas': listado_paradas,
             'pagina_alertas': pagina_alertas,
             'pagina_paradas': pagina_paradas,
+            'vista': vista,
+            'orden': orden,
+            'persona': persona,
+            'personas': personas,
         },
         status=estado,
     )
@@ -172,7 +218,7 @@ def cancelar(request):
                 request,
                 'Esta parada ya estaba cancelada. Se conservó el primer registro.',
             )
-            return redirect('principal')
+            return redirigir_lista(request, 'paradas')
         formulario = CancelacionForm(request.POST, prefix=f'cancelar-{parada.pk}')
         if not formulario.is_valid():
             return None
@@ -183,4 +229,4 @@ def cancelar(request):
             update_fields=['cancelada_por', 'cancelada_en', 'motivo_cancelacion']
         )
     messages.success(request, 'Parada cancelada.')
-    return redirect('principal')
+    return redirigir_lista(request, 'paradas')

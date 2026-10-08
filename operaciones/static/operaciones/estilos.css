@@ -144,6 +144,47 @@ input, textarea {
 
 .pagina h2 span { color: var(--suave); font-weight: 500; }
 
+.pestanas {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.pestanas a {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--suave);
+  text-align: center;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.pestanas a.activa {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: white;
+}
+
+.filtros {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.8rem;
+  align-items: end;
+  margin-bottom: 0.4rem;
+}
+
+select {
+  width: 100%;
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  background: white;
+  color: var(--tinta);
+  font: inherit;
+}
+
 .avisos { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
 
 .avisos li {
@@ -216,4 +257,5 @@ dialog.confirmar .acciones {
 
 @media (max-width: 640px) {
   .barra, .sesion { align-items: flex-start; flex-direction: column; }
+  .filtros { grid-template-columns: 1fr; }
 }

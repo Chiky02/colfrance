@@ -41,6 +41,40 @@
     </ul>
   {% endif %}
 
+  {% if rol == "supervisor" or rol == "jefe" %}
+    <nav class="pestanas" aria-label="Reportes">
+      <a href="?vista=alertas&persona={{ persona }}&orden={{ orden }}" class="{% if vista == 'alertas' %}activa{% endif %}" {% if vista == "alertas" %}aria-current="page"{% endif %}>
+        Alertas
+      </a>
+      <a href="?vista=paradas&persona={{ persona }}&orden={{ orden }}" class="{% if vista == 'paradas' %}activa{% endif %}" {% if vista == "paradas" %}aria-current="page"{% endif %}>
+        Paradas
+      </a>
+    </nav>
+    <form method="get" class="filtros">
+      <input type="hidden" name="vista" value="{{ vista }}">
+      <div class="campo">
+        <label for="filtro-persona">Persona</label>
+        <select id="filtro-persona" name="persona">
+          <option value="">Todas</option>
+          {% for opcion in personas %}
+            <option value="{{ opcion.pk }}" {% if persona == opcion.pk|stringformat:"s" %}selected{% endif %}>
+              {{ opcion|nombre_persona }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="filtro-orden">Fecha</label>
+        <select id="filtro-orden" name="orden">
+          <option value="reciente" {% if orden == "reciente" %}selected{% endif %}>Más reciente</option>
+          <option value="antiguo" {% if orden == "antiguo" %}selected{% endif %}>Más antiguo</option>
+        </select>
+      </div>
+      <button type="submit" class="secundario">Aplicar</button>
+    </form>
+  {% endif %}
+
+  {% if rol == "operario" or vista == "alertas" %}
   <section class="tarjeta" id="alertas">
     <h2>Alertas <span>{{ pagina_alertas.paginator.count }}</span></h2>
 
@@ -50,6 +84,7 @@
         <input type="hidden" name="accion" value="crear_alerta">
         <input type="hidden" name="alertas" value="{{ pagina_alertas.number }}">
         <input type="hidden" name="paradas" value="{{ pagina_paradas.number }}">
+        {% include "operaciones/filtros_ocultos.html" %}
         <h3>Registrar alerta</h3>
         {% for field in alerta_form %}
           <div class="campo">
@@ -86,6 +121,7 @@
                   <input type="hidden" name="alerta_id" value="{{ alerta.pk }}">
                   <input type="hidden" name="alertas" value="{{ pagina_alertas.number }}">
                   <input type="hidden" name="paradas" value="{{ pagina_paradas.number }}">
+                  {% include "operaciones/filtros_ocultos.html" %}
                   {% for field in formulario %}
                     <div class="campo">
                       {{ field.label_tag }}
@@ -109,8 +145,9 @@
       <p class="vacio">Todavía no hay alertas para mostrar.</p>
     {% endif %}
   </section>
+  {% endif %}
 
-  {% if rol == "supervisor" or rol == "jefe" %}
+  {% if vista == "paradas" and rol == "supervisor" or vista == "paradas" and rol == "jefe" %}
     <section class="tarjeta" id="paradas">
       <h2>Paradas <span>{{ pagina_paradas.paginator.count }}</span></h2>
 
@@ -120,6 +157,7 @@
           <input type="hidden" name="accion" value="crear_parada">
           <input type="hidden" name="alertas" value="{{ pagina_alertas.number }}">
           <input type="hidden" name="paradas" value="{{ pagina_paradas.number }}">
+          {% include "operaciones/filtros_ocultos.html" %}
           <h3>Registrar parada</h3>
           {% for field in parada_form %}
             <div class="campo">
@@ -159,6 +197,7 @@
                     <input type="hidden" name="parada_id" value="{{ parada.pk }}">
                     <input type="hidden" name="alertas" value="{{ pagina_alertas.number }}">
                     <input type="hidden" name="paradas" value="{{ pagina_paradas.number }}">
+                    {% include "operaciones/filtros_ocultos.html" %}
                     {% for field in formulario %}
                       <div class="campo">
                         {{ field.label_tag }}

@@ -1,11 +1,11 @@
 {% if pagina.paginator.num_pages > 1 %}
 <nav class="paginacion" aria-label="Páginas">
   {% if pagina.has_previous %}
-    <a href="?{{ clave }}={{ pagina.previous_page_number }}&{{ otra_clave }}={{ otra.number }}">Anterior</a>
+    <a href="?vista={{ vista }}&persona={{ persona }}&orden={{ orden }}&{{ clave }}={{ pagina.previous_page_number }}&{{ otra_clave }}={{ otra.number }}">Anterior</a>
   {% endif %}
   <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
   {% if pagina.has_next %}
-    <a href="?{{ clave }}={{ pagina.next_page_number }}&{{ otra_clave }}={{ otra.number }}">Siguiente</a>
+    <a href="?vista={{ vista }}&persona={{ persona }}&orden={{ orden }}&{{ clave }}={{ pagina.next_page_number }}&{{ otra_clave }}={{ otra.number }}">Siguiente</a>
   {% endif %}
 </nav>
 {% endif %}
